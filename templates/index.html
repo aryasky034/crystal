@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRYSTAL AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════
+   BASE RESET & ROOT VARIABLES
+════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:           #0a0a0b;
+  --card-bg:      #151619;
+  --accent:       #00f2ff;
+  --accent-muted: rgba(0,242,255,0.10);
+  --accent-b:     rgba(0,242,255,0.20);
+  --text:         #ffffff;
+  --text-2:       #8e9299;
+  --border:       rgba(255,255,255,0.07);
+  --glass:        rgba(21,22,25,0.70);
+  --font:         'Inter', sans-serif;
+  --mono:         'JetBrains Mono', monospace;
+}
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.2); }
+
+/* ════════════════════════════════════════════
+   GLASS + ACCENT HELPERS
+════════════════════════════════════════════ */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.accent { color: var(--accent); text-shadow: 0 0 8px var(--accent-muted); }
+
+/* ════════════════════════════════════════════
+   LAYOUT SHELL
+════════════════════════════════════════════ */
+#app { display:flex; height:100vh; width:100vw; overflow:hidden; }
+
+/* ════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════ */
+#sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: rgba(21,22,25,0.50);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0;
+}
+
+.sidebar-brand {
+  padding: 0 24px 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width:40px; height:40px;
+  border-radius:12px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-b);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+.brand-icon svg { width:22px; height:22px; color:var(--accent); }
+
+.brand-name {
+  font-family: var(--mono);
+  font-weight:700;
+  font-size:20px;
+  letter-spacing:.2em;
+  color:var(--accent);
+  text-shadow:0 0 8px var(--accent-muted);
+}
+
+.sidebar-nav {
+  flex:1; padding:0 16px;
+  display:flex; flex-direction:column; gap:4px;
+}
+
+.nav-item {
+  width:100%;
+  display:flex; align-items:center; gap:14px;
+  padding:12px 16px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-2);
+  font-family:var(--font);
+  font-size:15px;
+  font-weight:500;
+  cursor:pointer;
+  transition:all .2s;
+  text-align:left;
+}
+
+.nav-item svg { width:20px; height:20px; flex-shrink:0; }
+.nav-item:hover { color:#e0e0e0; background:rgba(255,255,255,0.05); }
+.nav-item.active {
+  background:var(--accent-muted);
+  border-color:var(--accent-b);
+  color:var(--accent);
+}
+.nav-item.active svg { filter:drop-shadow(0 0 6px rgba(0,242,255,.5)); }
+
+.sidebar-footer { padding:0 16px; }
+
+.sys-card {
+  padding:16px;
+  border-radius:16px;
+  background: rgba(0,242,255,.04);
+  border: 1px solid rgba(0,242,255,.10);
+}
+
+.sys-card-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+}
+
+.sys-card-label {
+  font-family:var(--mono); font-size:9px;
+  text-transform:uppercase; letter-spacing:.2em;
+  color:rgba(0,242,255,.6);
+}
+
+.pulse-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent);
+  animation:pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.sys-bar {
+  height:4px; width:100%;
+  background:rgba(255,255,255,.05);
+  border-radius:999px; overflow:hidden; margin-bottom:6px;
+}
+
+.sys-bar-fill {
+  height:100%; background:var(--accent);
+  border-radius:999px; transition:width .6s;
+}
+
+.sys-text { font-family:var(--mono); font-size:10px; color:var(--text-2); }
+
+/* settings btn */
+.settings-btn {
+  width:100%;
+  display:flex; align-items:center; gap:14px;
+  padding:12px 16px; border-radius:12px;
+  border:none; background:transparent;
+  color:var(--text-2); font-family:var(--font);
+  font-size:15px; font-weight:500;
+  cursor:pointer; margin-bottom:8px;
+  transition:all .2s;
+}
+.settings-btn svg { width:20px; height:20px; }
+.settings-btn:hover { color:#e0e0e0; background:rgba(255,255,255,.05); }
+
+/* ════════════════════════════════════════════
+   MAIN COLUMN
+════════════════════════════════════════════ */
+#main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── HEADER ── */
+#header {
+  height:72px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 32px;
+  background:rgba(10,10,11,.80);
+  backdrop-filter:blur(12px);
+  z-index:10;
+}
+
+.search-wrap {
+  display:flex; align-items:center; gap:12px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px 16px;
+  width:380px;
+  transition:border-color .2s;
+  cursor:text;
+}
+.search-wrap:focus-within { border-color:rgba(0,242,255,.3); }
+.search-wrap svg { width:16px; height:16px; color:var(--text-2); flex-shrink:0; }
+.search-input {
+  background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:14px; width:100%;
+}
+.search-input::placeholder { color:#3a3b40; }
+
+.header-right { display:flex; align-items:center; gap:24px; }
+
+.hdr-time-label { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-2); }
+.hdr-time { font-family:var(--mono); font-size:18px; font-weight:500; line-height:1.2; }
+
+.icon-btn {
+  position:relative; padding:8px;
+  border-radius:12px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  cursor:pointer; color:var(--text-2);
+  transition:background .2s;
+}
+.icon-btn:hover { background:rgba(255,255,255,.1); }
+.icon-btn svg { width:20px; height:20px; display:block; }
+.notif-pip {
+  position:absolute; top:6px; right:6px;
+  width:8px; height:8px;
+  background:var(--accent); border-radius:50%;
+  border:2px solid var(--bg);
+}
+
+.avatar-ring {
+  width:40px; height:40px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#7000ff);
+  padding:1.5px; cursor:pointer; flex-shrink:0;
+}
+.avatar-inner {
+  width:100%; height:100%; border-radius:50%;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:13px; font-weight:700;
+  color:var(--accent);
+}
+
+/* ════════════════════════════════════════════
+   TAB CONTAINER
+════════════════════════════════════════════ */
+#tab-container { flex:1; overflow-y:auto; padding:32px; }
+
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* ════════════════════════════════════════════
+   GLASS CARD
+════════════════════════════════════════════ */
+.gc {
+  background:var(--glass);
+  backdrop-filter:blur(12px);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:24px;
+}
+
+.gc-title {
+  font-size:17px; font-weight:600;
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:16px;
+}
+.gc-title svg { width:20px; height:20px; color:var(--accent); flex-shrink:0; }
+
+/* ════════════════════════════════════════════
+   PLANNING TAB
+════════════════════════════════════════════ */
+.planning-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:28px;
+}
+
+.planning-left { display:flex; flex-direction:column; gap:24px; }
+.planning-right { }
+
+/* TODO */
+.todo-meta { font-family:var(--mono); font-size:11px; color:var(--text-2); margin-left:auto; }
+
+.input-row { display:flex; gap:8px; margin-bottom:12px; }
+
+.field {
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;
+  padding:9px 14px;
+  color:var(--text);
+  font-family:var(--font);
+  font-size:14px;
+  outline:none;
+  transition:border-color .2s;
+  width:100%;
+}
+.field:focus { border-color:rgba(0,242,255,.4); }
+.field::placeholder { color:#3a3b40; }
+
+.btn-cyan {
+  background:var(--accent); color:#000;
+  border:none; border-radius:12px;
+  padding:9px 14px; cursor:pointer;
+  font-weight:700; font-size:18px; line-height:1;
+  flex-shrink:0; transition:opacity .2s;
+}
+.btn-cyan:hover { opacity:.85; }
+.btn-cyan-sm {
+  background:var(--accent); color:#000;
+  border:none; border-radius:10px;
+  padding:8px 14px; cursor:pointer;
+  font-weight:700; font-size:12px;
+  flex-shrink:0; transition:opacity .2s;
+}
+.btn-cyan-sm:hover { opacity:.85; }
+
+.todo-scroll { max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+
+.todo-row {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+  transition:all .2s;
+}
+.todo-row.done { opacity:.5; }
+
+.todo-check-btn {
+  background:none; border:none; cursor:pointer;
+  display:flex; align-items:center;
+  flex-shrink:0; transition:color .2s;
+}
+.todo-check-btn svg { width:20px; height:20px; }
+.todo-check-btn.done { color:var(--accent); }
+.todo-check-btn.undone { color:#4a4b52; }
+
+.todo-label { flex:1; font-size:14px; }
+.todo-label.done { text-decoration:line-through; }
+
+.todo-del-btn {
+  background:none; border:none; cursor:pointer;
+  color:#3a3b40; transition:color .2s; display:flex;
+}
+.todo-del-btn:hover { color:#ff4444; }
+.todo-del-btn svg { width:16px; height:16px; }
+
+/* Timer + Alarm mini grid */
+.mini-pair { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
+.big-mono {
+  font-family:var(--mono); font-size:36px; font-weight:700;
+  color:var(--accent); text-shadow:0 0 8px var(--accent-muted);
+  text-align:center; margin:8px 0 14px;
+}
+
+.btn-full {
+  width:100%; padding:10px; border-radius:12px;
+  font-weight:700; font-size:12px; letter-spacing:.08em;
+  cursor:pointer; border:none; transition:all .2s;
+}
+.btn-start  { background:var(--accent); color:#000; }
+.btn-stop   { background:rgba(255,68,68,.15); color:#ff4444; border:1px solid rgba(255,68,68,.3) !important; }
+.btn-set    { background:var(--accent); color:#000; }
+.btn-unset  { background:rgba(255,255,255,.05); color:var(--text-2); border:1px solid rgba(255,255,255,.1) !important; }
+
+/* Calendar */
+.cal-wrap { display:flex; flex-direction:column; height:100%; }
+
+.cal-hdr {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;
+}
+
+.cal-nav-grp { display:flex; gap:4px; }
+.cal-nav-btn {
+  background:none; border:none; cursor:pointer;
+  color:var(--text-2); padding:6px; border-radius:8px;
+  transition:background .2s; display:flex;
+}
+.cal-nav-btn:hover { background:rgba(255,255,255,.05); }
+.cal-nav-btn svg { width:16px; height:16px; }
+
+.cal-weekdays {
+  display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:6px;
+}
+.cal-wd {
+  text-align:center; font-family:var(--mono);
+  font-size:9px; text-transform:uppercase;
+  letter-spacing:.15em; color:var(--text-2); padding:4px 0;
+}
+
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+
+.cal-cell {
+  aspect-ratio:1; border-radius:12px;
+  border:1px solid transparent;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  cursor:pointer; transition:all .15s;
+  font-family:var(--mono); font-size:12px;
+}
+.cal-cell:hover { background:rgba(255,255,255,.05); }
+.cal-cell.other { opacity:.2; }
+.cal-cell.today {
+  background:rgba(0,242,255,.10);
+  border-color:rgba(0,242,255,.3);
+  color:var(--accent); font-weight:700;
+}
+.event-pip { width:4px; height:4px; border-radius:50%; background:var(--accent); margin-top:2px; }
+
+.events-wrap { margin-top:24px; flex:1; overflow-y:auto; }
+.events-hdr {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+}
+.events-hdr-label {
+  font-family:var(--mono); font-size:10px;
+  text-transform:uppercase; letter-spacing:.2em; color:var(--text-2);
+}
+.add-evt-btn { font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer; }
+.add-evt-btn:hover { text-decoration:underline; }
+
+.evt-form {
+  padding:14px; border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(0,242,255,.2);
+  margin-bottom:12px;
+  display:none; flex-direction:column; gap:8px;
+}
+.evt-form.show { display:flex; }
+.evt-form .field { font-size:13px; padding:8px 12px; }
+.evt-form-row { display:flex; gap:8px; }
+
+.evt-item {
+  display:flex; align-items:center; gap:14px;
+  padding:12px 14px; border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.evt-date {
+  width:44px; height:44px; border-radius:14px;
+  background:var(--accent-muted);
+  border:1px solid var(--accent-b);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; flex-shrink:0;
+}
+.evt-month { font-family:var(--mono); font-size:9px; font-weight:700; color:var(--accent); text-transform:uppercase; }
+.evt-day   { font-size:14px; font-weight:700; }
+.evt-title { font-size:14px; font-weight:500; }
+.evt-meta  { font-family:var(--mono); font-size:10px; color:var(--text-2); margin-top:2px; }
+
+/* ════════════════════════════════════════════
+   NEWS TAB
+════════════════════════════════════════════ */
+.news-page { max-width:860px; margin:0 auto; }
+.news-page-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:32px; }
+.page-title { font-size:28px; font-weight:700; display:flex; align-items:center; gap:12px; }
+.page-title svg { width:28px; height:28px; color:var(--accent); }
+.page-sub { color:var(--text-2); margin-top:4px; font-size:14px; }
+
+.refresh-btn {
+  padding:12px; border-radius:16px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  cursor:pointer; color:var(--text-2);
+  transition:all .2s; display:flex;
+}
+.refresh-btn:hover { background:rgba(255,255,255,.10); }
+.refresh-btn svg { width:18px; height:18px; }
+.refresh-btn.spin svg { animation:spin 1s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.news-list { display:flex; flex-direction:column; gap:12px; }
+
+.news-card {
+  background:var(--glass); backdrop-filter:blur(12px);
+  border:1px solid var(--border);
+  border-radius:24px; padding:22px 24px;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+  cursor:pointer; transition:border-color .2s;
+}
+.news-card:hover { border-color:rgba(0,242,255,.25); }
+
+.news-meta { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.news-tag {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:6px;
+  background:var(--accent-muted); border:1px solid var(--accent-b);
+  color:var(--accent); font-family:var(--mono);
+  font-size:9px; text-transform:uppercase; letter-spacing:.15em;
+}
+.news-tag svg { width:10px; height:10px; }
+.news-time { font-family:var(--mono); font-size:10px; color:var(--text-2); display:flex; align-items:center; gap:4px; }
+.news-time svg { width:10px; height:10px; }
+.news-headline { font-size:16px; font-weight:500; line-height:1.4; transition:color .2s; }
+.news-card:hover .news-headline { color:var(--accent); }
+
+.ext-btn {
+  padding:8px; border-radius:12px;
+  background:rgba(255,255,255,.05);
+  flex-shrink:0; opacity:0; transition:opacity .2s;
+  color:var(--text-2);
+}
+.news-card:hover .ext-btn { opacity:1; }
+.ext-btn svg { width:16px; height:16px; }
+
+.skeleton-card {
+  height:90px; border-radius:24px;
+  background:rgba(255,255,255,.04);
+  animation:shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.8} }
+
+/* ════════════════════════════════════════════
+   SMART HOME TAB
+════════════════════════════════════════════ */
+.sh-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:32px; }
+.sh-badges { display:flex; gap:12px; }
+
+.badge-pill {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 16px; border-radius:16px;
+  background:var(--glass); border:1px solid var(--border);
+  font-family:var(--mono); font-size:13px;
+}
+.badge-pill svg { width:16px; height:16px; }
+
+.rooms-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+
+.room-card {
+  background:var(--glass); backdrop-filter:blur(12px);
+  border:1px solid var(--border);
+  border-radius:28px; padding:24px;
+  position:relative; overflow:hidden;
+  transition:transform .3s, opacity .3s;
+}
+.room-card:hover { transform:translateY(-5px); }
+.room-card.off { opacity:.60; }
+
+.room-glow {
+  position:absolute; top:-60px; right:-60px;
+  width:140px; height:140px; border-radius:50%;
+  filter:blur(60px); opacity:.20; pointer-events:none;
+}
+
+.room-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+
+.room-icon-wrap {
+  width:44px; height:44px; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .2s;
+}
+.room-icon-wrap.on { background:rgba(255,255,255,.10); }
+.room-icon-wrap.off { background:rgba(255,255,255,.04); }
+.room-icon-wrap svg { width:22px; height:22px; }
+.room-icon-wrap.on svg { color:var(--accent); }
+.room-icon-wrap.off svg { color:#4a4b52; }
+
+.power-btn {
+  padding:8px; border-radius:12px;
+  border:1px solid; cursor:pointer;
+  display:flex; align-items:center; transition:all .2s;
+}
+.power-btn.on  { background:var(--accent); border-color:var(--accent); color:#000; }
+.power-btn.off { background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.10); color:#4a4b52; }
+.power-btn svg { width:16px; height:16px; }
+
+.room-name   { font-size:20px; font-weight:700; margin-bottom:4px; }
+.room-status { font-family:var(--mono); font-size:10px; color:var(--text-2); text-transform:uppercase; letter-spacing:.1em; }
+
+.bright-lbl {
+  display:flex; justify-content:space-between;
+  font-family:var(--mono); font-size:9px;
+  text-transform:uppercase; letter-spacing:.1em;
+  color:var(--text-2); margin:16px 0 6px;
+}
+.bright-bar { height:5px; border-radius:999px; background:rgba(255,255,255,.05); overflow:hidden; }
+.bright-fill { height:100%; width:80%; border-radius:999px; background:var(--accent); }
+
+.color-row { display:flex; align-items:center; gap:10px; margin-top:16px; }
+.color-row svg { width:16px; height:16px; color:var(--text-2); flex-shrink:0; }
+.swatches { display:flex; gap:8px; }
+.swatch {
+  width:22px; height:22px; border-radius:50%;
+  border:2px solid transparent; cursor:pointer; transition:transform .2s;
+}
+.swatch.sel { border-color:#fff; transform:scale(1.15); }
+
+/* ════════════════════════════════════════════
+   VOICE OVERLAY
+════════════════════════════════════════════ */
+#voice-overlay {
+  position:fixed; inset:0;
+  pointer-events:none; z-index:50;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  gap:32px;
+  opacity:0; transition:opacity .3s;
+}
+#voice-overlay.show { opacity:1; pointer-events:all; }
+#voice-overlay .bg {
+  position:absolute; inset:0;
+  background:rgba(0,242,255,.04);
+  backdrop-filter:blur(2px);
+}
+
+.voice-center { position:relative; display:flex; flex-direction:column; align-items:center; gap:32px; z-index:1; }
+
+.rings-wrap { position:relative; width:192px; height:192px; display:flex; align-items:center; justify-content:center; }
+
+.ring {
+  position:absolute; inset:0;
+  border:1px solid rgba(0,242,255,.3);
+  border-radius:50%;
+  animation:ring-out 2s ease-out infinite;
+}
+.ring:nth-child(2) { animation-delay:.6s; }
+.ring:nth-child(3) { animation-delay:1.2s; }
+@keyframes ring-out {
+  0% { transform:scale(.8); opacity:.6; }
+  100% { transform:scale(1.6); opacity:0; }
+}
+
+.voice-orb {
+  width:96px; height:96px; border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 50px var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1; position:relative;
+}
+.voice-orb svg { width:40px; height:40px; color:#000; }
+
+.wave-row {
+  position:absolute; bottom:-48px;
+  display:flex; align-items:center; gap:3px; height:24px;
+}
+.wave-bar {
+  width:4px; background:var(--accent); border-radius:2px;
+  animation:wave-anim .8s ease-in-out infinite;
+}
+@keyframes wave-anim { 0%,100%{height:6px} 50%{height:24px} }
+
+.voice-label {
+  font-family:var(--mono); font-size:14px; font-weight:700;
+  letter-spacing:.3em; text-transform:uppercase; color:var(--accent);
+  z-index:1;
+}
+
+.anim-spin  { animation:spin 1s linear infinite; }
+.anim-pulse { animation:pulse-anim 1s ease-in-out infinite; }
+@keyframes pulse-anim { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+/* ════════════════════════════════════════════
+   CHAT BUTTON + PANEL
+════════════════════════════════════════════ */
+#chat-btn {
+  position:fixed; bottom:32px; right:32px;
+  width:64px; height:64px; border-radius:20px;
+  background:var(--accent);
+  box-shadow:0 0 20px var(--accent);
+  border:none; cursor:pointer; color:#000;
+  display:flex; align-items:center; justify-content:center;
+  z-index:40; transition:transform .2s;
+}
+#chat-btn:hover { transform:scale(1.08); }
+#chat-btn svg { width:32px; height:32px; }
+
+#chat-panel {
+  position:fixed; bottom:32px; right:32px;
+  width:450px; height:600px;
+  border-radius:40px;
+  background:var(--glass);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(0,242,255,.2);
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  z-index:40;
+  display:none; flex-direction:column; overflow:hidden;
+}
+#chat-panel.show { display:flex; }
+
+.cp-header {
+  padding:16px 20px;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  background:rgba(255,255,255,.04);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+}
+.cp-title { display:flex; align-items:center; gap:12px; }
+.cp-icon {
+  width:32px; height:32px; border-radius:10px;
+  background:var(--accent-muted); border:1px solid var(--accent-b);
+  display:flex; align-items:center; justify-content:center;
+}
+.cp-icon svg { width:18px; height:18px; color:var(--accent); }
+.cp-name {
+  font-family:var(--mono); font-weight:700; font-size:13px;
+  letter-spacing:.2em; color:var(--accent);
+  text-shadow:0 0 8px var(--accent-muted);
+}
+.cp-actions { display:flex; gap:4px; }
+.cp-act-btn {
+  padding:6px; background:none; border:none;
+  cursor:pointer; color:var(--text-2);
+  border-radius:8px; transition:background .2s; display:flex;
+}
+.cp-act-btn:hover { background:rgba(255,255,255,.10); }
+.cp-act-btn svg { width:16px; height:16px; }
+
+.chat-msgs {
+  flex:1; overflow-y:auto;
+  padding:24px 20px;
+  display:flex; flex-direction:column; gap:20px;
+}
+
+.cmsg { display:flex; flex-direction:column; }
+.cmsg.user { align-items:flex-end; }
+.cmsg.crystal { align-items:flex-start; }
+
+.cmsg-bubble {
+  max-width:85%; padding:14px 18px;
+  border-radius:24px; font-size:14px; line-height:1.55;
+}
+.cmsg.user .cmsg-bubble {
+  background:var(--accent); color:#000;
+  border-top-right-radius:6px; font-weight:500;
+}
+.cmsg.crystal .cmsg-bubble {
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.07);
+  border-top-left-radius:6px;
+}
+.cmsg-time {
+  font-family:var(--mono); font-size:9px;
+  color:#3a3b40; text-transform:uppercase;
+  margin-top:4px; padding:0 4px;
+}
+
+.thinking-bubble {
+  display:flex; gap:5px; align-items:center;
+  padding:14px 18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:24px; border-top-left-radius:6px;
+  width:fit-content;
+}
+.thinking-bubble span {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--text-2);
+  animation:blink 1.2s infinite;
+}
+.thinking-bubble span:nth-child(2) { animation-delay:.2s; }
+.thinking-bubble span:nth-child(3) { animation-delay:.4s; }
+@keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+.chat-input-area {
+  padding:20px; flex-shrink:0;
+  background:rgba(255,255,255,.02);
+  border-top:1px solid rgba(255,255,255,.05);
+}
+.chat-input-row {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:20px;
+  padding:8px 8px 8px 14px;
+  transition:border-color .2s;
+}
+.chat-input-row:focus-within { border-color:rgba(0,242,255,.3); }
+
+.mic-btn {
+  padding:8px; background:none; border:none;
+  cursor:pointer; color:var(--text-2);
+  border-radius:12px; transition:all .2s; display:flex;
+}
+.mic-btn:hover { background:rgba(255,255,255,.10); color:var(--accent); }
+.mic-btn svg { width:18px; height:18px; }
+
+.chat-field {
+  flex:1; background:transparent;
+  border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:14px;
+}
+.chat-field::placeholder { color:#3a3b40; }
+
+.send-btn {
+  padding:8px 10px; background:var(--accent);
+  color:#000; border:none; border-radius:14px;
+  cursor:pointer; transition:opacity .2s; display:flex;
+}
+.send-btn:hover { opacity:.85; }
+.send-btn svg { width:18px; height:18px; }
+
+/* SVG inline display fix */
+svg { display:inline-block; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ─── SIDEBAR ─────────────────────────────── -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </div>
+    <span class="brand-name">CRYSTAL</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item active" onclick="switchTab('planning',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Planning
+    </button>
+    <button class="nav-item" onclick="switchTab('news',this)">
+      <svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></svg>
+      News
+    </button>
+    <button class="nav-item" onclick="switchTab('smarthome',this)">
+      <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Smart Home
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="settings-btn">
+      <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      Settings
+    </button>
+    <div class="sys-card">
+      <div class="sys-card-header">
+        <span class="sys-card-label">System Status</span>
+        <div class="pulse-dot"></div>
+      </div>
+      <div class="sys-bar"><div class="sys-bar-fill" id="cpuBar" style="width:0%"></div></div>
+      <div class="sys-text" id="sysText">CPU: --% | MEM: --%</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MAIN ─────────────────────────────────── -->
+<div id="main">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="search-wrap" onclick="document.getElementById('srch').focus()">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="srch" class="search-input" type="text" placeholder="Ask Crystal anything..."
+        onkeydown="if(event.key==='Enter'&&this.value.trim()){openChat();setTimeout(()=>{document.getElementById('chat-field').value=this.value;this.value='';},50)}"/>
+    </div>
+    <div class="header-right">
+      <div>
+        <div class="hdr-time-label">Current Time</div>
+        <div class="hdr-time" id="hdr-clock">--:--</div>
+      </div>
+      <button class="icon-btn">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-pip"></div>
+      </button>
+      <div class="avatar-ring">
+        <div class="avatar-inner">RZ</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TAB PANELS -->
+  <div id="tab-container">
+
+    <!-- ══ PLANNING ══════════════════════════════ -->
+    <div class="tab-panel active" id="tab-planning">
+      <div class="planning-grid">
+
+        <!-- LEFT COLUMN -->
+        <div class="planning-left">
+
+          <!-- TODO LIST -->
+          <div class="gc">
+            <div class="gc-title" style="justify-content:space-between">
+              <span style="display:flex;align-items:center;gap:10px">
+                <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                To-Do List
+              </span>
+              <span class="todo-meta" id="todo-count">0 Pending</span>
+            </div>
+            <div class="input-row">
+              <input class="field" type="text" id="todo-input" placeholder="Add a new task..."
+                onkeydown="if(event.key==='Enter')addTodo()" style="flex:1"/>
+              <button class="btn-cyan" onclick="addTodo()">
+                <svg viewBox="0 0 24 24" style="width:20px;height:20px;color:#000"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <div class="todo-scroll" id="todo-list"></div>
+          </div>
+
+          <!-- TIMER + ALARM -->
+          <div class="mini-pair">
+            <!-- Timer -->
+            <div class="gc">
+              <div class="gc-title">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+                Timer
+              </div>
+              <div class="big-mono" id="timer-display">05:00</div>
+              <div id="timer-set-ui">
+                <div class="input-row" style="margin-bottom:0">
+                  <input class="field" style="flex:1;text-align:center;font-family:var(--mono)" type="text" id="timer-input" value="05:00" placeholder="MM:SS"/>
+                  <button class="btn-cyan-sm" onclick="startTimer()">START</button>
+                </div>
+              </div>
+              <button class="btn-full btn-stop" id="timer-stop" style="display:none" onclick="stopTimer()">STOP</button>
+            </div>
+            <!-- Alarm -->
+            <div class="gc">
+              <div class="gc-title">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="2" y1="2" x2="22" y2="22" stroke-opacity=".4"/></svg>
+                Alarm
+              </div>
+              <input class="field" style="text-align:center;font-size:24px;font-family:var(--mono);margin-bottom:12px" type="time" id="alarm-input" value="08:00"/>
+              <button class="btn-full btn-unset" id="alarm-btn" onclick="toggleAlarm()">SET ALARM</button>
+            </div>
+          </div>
+
+        </div><!-- /planning-left -->
+
+        <!-- CALENDAR -->
+        <div class="gc cal-wrap">
+          <div class="cal-hdr">
+            <div class="gc-title" style="margin:0">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="cal-month-label">Month Year</span>
+            </div>
+            <div class="cal-nav-grp">
+              <button class="cal-nav-btn" onclick="changeMonth(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <button class="cal-nav-btn" onclick="changeMonth(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+          </div>
+          <div class="cal-weekdays">
+            <div class="cal-wd">Sun</div><div class="cal-wd">Mon</div><div class="cal-wd">Tue</div>
+            <div class="cal-wd">Wed</div><div class="cal-wd">Thu</div><div class="cal-wd">Fri</div><div class="cal-wd">Sat</div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+
+          <div class="events-wrap">
+            <div class="events-hdr">
+              <span class="events-hdr-label">Upcoming Events</span>
+              <button class="add-evt-btn" onclick="toggleEvtForm()">+ Add Event</button>
+            </div>
+            <div class="evt-form" id="evt-form">
+              <input class="field" type="text" id="evt-title" placeholder="Event Name"/>
+              <div class="evt-form-row">
+                <input class="field" type="time" id="evt-time" value="12:00" style="flex:1"/>
+                <select class="field" id="evt-cat" style="flex:1">
+                  <option>Personal</option><option>Work</option><option>Project</option>
+                </select>
+              </div>
+              <button class="btn-full btn-set" onclick="addEvent()">Set Event</button>
+            </div>
+            <div id="events-list"></div>
+          </div>
+        </div><!-- /calendar -->
+
+      </div>
+    </div><!-- /tab-planning -->
+
+    <!-- ══ NEWS ══════════════════════════════════ -->
+    <div class="tab-panel" id="tab-news">
+      <div class="news-page">
+        <div class="news-page-hdr">
+          <div>
+            <div class="page-title">
+              <svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></svg>
+              Global Intelligence
+            </div>
+            <div class="page-sub">Top headlines — ask Crystal for analysis</div>
+          </div>
+          <button class="refresh-btn" id="refresh-btn" onclick="fetchNews()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </div>
+        <div class="news-list" id="news-list">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SMART HOME ══════════════════════════════ -->
+    <div class="tab-panel" id="tab-smarthome">
+      <div class="sh-hdr">
+        <div>
+          <div class="page-title">
+            <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Smart Control
+          </div>
+          <div class="page-sub" id="active-zones">Managing 0 active zones</div>
+        </div>
+        <div class="sh-badges">
+          <div class="badge-pill">
+            <svg viewBox="0 0 24 24" style="color:#f97316"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+            <span id="avg-temp">Avg: --°C</span>
+          </div>
+          <div class="badge-pill">
+            <svg viewBox="0 0 24 24" style="color:#10b981"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Secure</span>
+          </div>
+        </div>
+      </div>
+      <div class="rooms-grid" id="rooms-grid"></div>
+    </div>
+
+  </div><!-- /tab-container -->
+</div><!-- /main -->
+
+<!-- ─── VOICE OVERLAY ─────────────────────────── -->
+<div id="voice-overlay">
+  <div class="bg"></div>
+  <div class="voice-center">
+    <div class="rings-wrap">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="voice-orb" id="voice-orb">
+        <svg id="voice-icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </div>
+      <div class="wave-row" id="wave-row" style="display:none">
+        <div class="wave-bar" style="animation-delay:0.0s"></div><div class="wave-bar" style="animation-delay:0.1s"></div>
+        <div class="wave-bar" style="animation-delay:0.2s"></div><div class="wave-bar" style="animation-delay:0.3s"></div>
+        <div class="wave-bar" style="animation-delay:0.4s"></div><div class="wave-bar" style="animation-delay:0.5s"></div>
+        <div class="wave-bar" style="animation-delay:0.6s"></div><div class="wave-bar" style="animation-delay:0.7s"></div>
+        <div class="wave-bar" style="animation-delay:0.8s"></div><div class="wave-bar" style="animation-delay:0.9s"></div>
+        <div class="wave-bar" style="animation-delay:1.0s"></div><div class="wave-bar" style="animation-delay:1.1s"></div>
+      </div>
+    </div>
+    <div class="voice-label" id="voice-label">Listening...</div>
+  </div>
+</div>
+
+<!-- ─── CHAT BUTTON ───────────────────────────── -->
+<button id="chat-btn" onclick="openChat()">
+  <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+<!-- ─── CHAT PANEL ────────────────────────────── -->
+<div id="chat-panel">
+  <div class="cp-header">
+    <div class="cp-title">
+      <div class="cp-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <span class="cp-name">CRYSTAL CORE</span>
+    </div>
+    <div class="cp-actions">
+      <button class="cp-act-btn" onclick="closeChat()" title="Close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="chat-msgs" id="chat-msgs">
+    <div class="cmsg crystal">
+      <div class="cmsg-bubble">Hey Renzo! I'm Crystal. Ready to help whenever you need me.</div>
+      <div class="cmsg-time">Crystal</div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <button class="mic-btn" onclick="startVoice()" title="Voice input">
+        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </button>
+      <input class="chat-field" id="chat-field" type="text" placeholder="Type a command..."
+        onkeydown="if(event.key==='Enter')sendMessage()"/>
+      <button class="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+const socket = io();
+
+// ─── CLOCK ──────────────────────────────────
+function tick() {
+  document.getElementById('hdr-clock').textContent =
+    new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+tick(); setInterval(tick, 1000);
+
+// ─── TABS ────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'news') fetchNews();
+}
+
+// ─── SOCKET ─────────────────────────────────
+socket.on('crystal_response', data => {
+  removeThinking(); addMsg('crystal', data.text);
+  setVoice('idle');
+  document.querySelector('.send-btn').disabled = false;
+});
+
+socket.on('status', d => setVoice(d.state));
+
+socket.on('system_stats', d => {
+  const cpu = Math.round(d.cpu);
+  const mem = Math.round(d.ram);
+  document.getElementById('cpuBar').style.width = cpu+'%';
+  document.getElementById('sysText').textContent = `CPU: ${cpu}% | MEM: ${mem}%`;
+});
+
+socket.on('listening_result', d => {
+  if (d.text) { document.getElementById('chat-field').value = d.text; sendMessage(); }
+  else setVoice('idle');
+});
+
+// ─── VOICE STATE ─────────────────────────────
+function setVoice(state) {
+  const ov    = document.getElementById('voice-overlay');
+  const label = document.getElementById('voice-label');
+  const icon  = document.getElementById('voice-icon');
+  const wave  = document.getElementById('wave-row');
+  icon.classList.remove('anim-spin','anim-pulse');
+  wave.style.display = 'none';
+
+  if (state === 'idle') { ov.classList.remove('show'); return; }
+  ov.classList.add('show');
+
+  if (state === 'listening') {
+    label.textContent = 'Listening...';
+    icon.innerHTML = '<path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>';
+    icon.classList.add('anim-pulse');
+  } else if (state === 'thinking') {
+    label.textContent = 'Processing...';
+    icon.innerHTML = '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>';
+    icon.classList.add('anim-spin');
+  } else if (state === 'speaking') {
+    label.textContent = 'Crystal Speaking';
+    icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+    wave.style.display = 'flex';
+  }
+}
+
+// ─── CHAT PANEL ──────────────────────────────
+function openChat()  { document.getElementById('chat-btn').style.display='none'; document.getElementById('chat-panel').classList.add('show'); document.getElementById('chat-field').focus(); }
+function closeChat() { document.getElementById('chat-panel').classList.remove('show'); document.getElementById('chat-btn').style.display='flex'; }
+
+function sendMessage() {
+  const f = document.getElementById('chat-field');
+  const t = f.value.trim(); if (!t) return;
+  addMsg('user', t); f.value = '';
+  showThinking();
+  document.querySelector('.send-btn').disabled = true;
+  socket.emit('user_message', { text: t });
+}
+
+function addMsg(role, text) {
+  const c = document.getElementById('chat-msgs');
+  const d = document.createElement('div');
+  d.className = 'cmsg ' + role;
+  const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML = `<div class="cmsg-bubble">${text.replace(/</g,'&lt;')}</div>
+    <div class="cmsg-time">${role==='user'?'You':'Crystal'} · ${time}</div>`;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
+function showThinking() {
+  const c = document.getElementById('chat-msgs');
+  const d = document.createElement('div');
+  d.className = 'cmsg crystal'; d.id = 'thinking-msg';
+  d.innerHTML = '<div class="thinking-bubble"><span></span><span></span><span></span></div>';
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function removeThinking() { const e = document.getElementById('thinking-msg'); if(e) e.remove(); }
+
+function startVoice() { setVoice('listening'); socket.emit('start_listening'); }
+
+// ─── TODO ────────────────────────────────────
+let todos = [
+  { text:'Calibrate system sensors', done:true },
+  { text:'Review security logs', done:false },
+  { text:'Update smart home firmware', done:false },
+];
+
+function renderTodos() {
+  const list = document.getElementById('todo-list');
+  const pending = todos.filter(t=>!t.done).length;
+  document.getElementById('todo-count').textContent = pending + ' Pending';
+  list.innerHTML = '';
+  todos.forEach((t,i) => {
+    const d = document.createElement('div');
+    d.className = 'todo-row' + (t.done?' done':'');
+    d.innerHTML = `
+      <button class="todo-check-btn ${t.done?'done':'undone'}" onclick="toggleTodo(${i})">
+        ${t.done
+          ? '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+          : '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>'}
+      </button>
+      <span class="todo-label${t.done?' done':''}">${t.text}</span>
+      <button class="todo-del-btn" onclick="deleteTodo(${i})">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>`;
+    list.appendChild(d);
+  });
+}
+function addTodo() {
+  const f = document.getElementById('todo-input');
+  if (!f.value.trim()) return;
+  todos.push({text:f.value.trim(),done:false}); f.value=''; renderTodos();
+}
+function toggleTodo(i) { todos[i].done=!todos[i].done; renderTodos(); }
+function deleteTodo(i) { todos.splice(i,1); renderTodos(); }
+renderTodos();
+
+// ─── TIMER ───────────────────────────────────
+let timerSec = 0, timerIv = null;
+
+function startTimer() {
+  const v = document.getElementById('timer-input').value;
+  const [m,s] = v.split(':').map(Number);
+  timerSec = (m||0)*60+(s||0);
+  if (!timerSec) return;
+  document.getElementById('timer-set-ui').style.display = 'none';
+  document.getElementById('timer-stop').style.display = 'block';
+  timerIv = setInterval(() => {
+    timerSec--;
+    const mm = String(Math.floor(timerSec/60)).padStart(2,'0');
+    const ss = String(timerSec%60).padStart(2,'0');
+    document.getElementById('timer-display').textContent = `${mm}:${ss}`;
+    if (timerSec<=0) stopTimer();
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerIv);
+  document.getElementById('timer-set-ui').style.display = 'block';
+  document.getElementById('timer-stop').style.display = 'none';
+  document.getElementById('timer-display').textContent = document.getElementById('timer-input').value || '05:00';
+}
+
+// ─── ALARM ───────────────────────────────────
+let alarmOn = false, alarmIv = null;
+function toggleAlarm() {
+  alarmOn = !alarmOn;
+  const btn = document.getElementById('alarm-btn');
+  btn.className = 'btn-full ' + (alarmOn ? 'btn-set' : 'btn-unset');
+  btn.textContent = alarmOn ? 'ALARM SET' : 'SET ALARM';
+  if (alarmOn) {
+    alarmIv = setInterval(() => {
+      const now = new Date().toTimeString().slice(0,5);
+      if (now === document.getElementById('alarm-input').value) {
+        alert('⏰ Crystal Alarm!'); toggleAlarm();
+      }
+    }, 10000);
+  } else clearInterval(alarmIv);
+}
+
+// ─── CALENDAR ────────────────────────────────
+let calDate = new Date();
+let calEvents = [{ date: new Date(), title:'System Maintenance', category:'Work' }];
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function renderCalendar() {
+  document.getElementById('cal-month-label').textContent = `${MONTHS[calDate.getMonth()]} ${calDate.getFullYear()}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const today = new Date();
+  const first = new Date(calDate.getFullYear(), calDate.getMonth(), 1);
+  const start = new Date(first); start.setDate(start.getDate()-start.getDay());
+  for (let i=0; i<42; i++) {
+    const d = new Date(start); d.setDate(d.getDate()+i);
+    const isMo  = d.getMonth()===calDate.getMonth();
+    const isTod = d.toDateString()===today.toDateString();
+    const hasEv = calEvents.some(e=>new Date(e.date).toDateString()===d.toDateString());
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell'+(isTod?' today':'')+(!isMo?' other':'');
+    cell.innerHTML = `<span>${d.getDate()}</span>${hasEv?'<div class="event-pip"></div>':''}`;
+    grid.appendChild(cell);
+  }
+  renderEvents();
+}
+function changeMonth(dir) { calDate.setMonth(calDate.getMonth()+dir); renderCalendar(); }
+function renderEvents() {
+  const list = document.getElementById('events-list');
+  list.innerHTML = '';
+  calEvents.forEach(e => {
+    const d = new Date(e.date);
+    const el = document.createElement('div');
+    el.className = 'evt-item';
+    el.innerHTML = `<div class="evt-date"><span class="evt-month">${MONTHS3[d.getMonth()]}</span><span class="evt-day">${String(d.getDate()).padStart(2,'0')}</span></div>
+      <div><div class="evt-title">${e.title}</div><div class="evt-meta">${e.category} · 10:00 AM</div></div>`;
+    list.appendChild(el);
+  });
+}
+function toggleEvtForm() {
+  const f = document.getElementById('evt-form');
+  f.classList.toggle('show');
+}
+function addEvent() {
+  const title = document.getElementById('evt-title').value.trim();
+  if (!title) return;
+  calEvents.push({ date:new Date(), title, category:document.getElementById('evt-cat').value });
+  document.getElementById('evt-form').classList.remove('show');
+  document.getElementById('evt-title').value = '';
+  renderCalendar();
+}
+renderCalendar();
+
+// ─── NEWS ────────────────────────────────────
+async function fetchNews() {
+  const btn  = document.getElementById('refresh-btn');
+  const list = document.getElementById('news-list');
+  btn.classList.add('spin');
+  list.innerHTML = '<div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>';
+  try {
+    const res  = await fetch('/api/news');
+    const data = await res.json();
+    list.innerHTML = '';
+    data.forEach(item => {
+      const d = document.createElement('div');
+      d.className = 'news-card';
+      d.innerHTML = `
+        <div>
+          <div class="news-meta">
+            <span class="news-tag">
+              <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              ${item.category}
+            </span>
+            <span class="news-time">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              ${item.time}
+            </span>
+          </div>
+          <div class="news-headline">${item.title}</div>
+        </div>
+        <div class="ext-btn">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </div>`;
+      list.appendChild(d);
+    });
+  } catch {
+    list.innerHTML = '<div style="color:var(--text-2);text-align:center;padding:48px 0">Could not load news. Ask Crystal for headlines!</div>';
+  }
+  btn.classList.remove('spin');
+}
+
+// ─── SMART HOME ──────────────────────────────
+let rooms = [
+  { id:1, name:'Office',      isOn:true,  color:'#00f2ff', temp:22 },
+  { id:2, name:'Living Room', isOn:false, color:'#ff00ea', temp:24 },
+  { id:3, name:'Bedroom',     isOn:true,  color:'#ff9d00', temp:21 },
+  { id:4, name:'Kitchen',     isOn:false, color:'#ffffff', temp:23 },
+];
+const SWATCHES = ['#00f2ff','#ff00ea','#ff9d00','#ffffff'];
+
+function renderRooms() {
+  const active = rooms.filter(r=>r.isOn).length;
+  const avg    = (rooms.reduce((a,r)=>a+r.temp,0)/rooms.length).toFixed(1);
+  document.getElementById('active-zones').textContent = `Managing ${active} active zones`;
+  document.getElementById('avg-temp').textContent = `Avg: ${avg}°C`;
+  const grid = document.getElementById('rooms-grid');
+  grid.innerHTML = '';
+  rooms.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'room-card' + (r.isOn?'':' off');
+    card.innerHTML = `
+      ${r.isOn?`<div class="room-glow" style="background:${r.color}"></div>`:''}
+      <div class="room-top">
+        <div class="room-icon-wrap ${r.isOn?'on':'off'}">
+          <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        </div>
+        <button class="power-btn ${r.isOn?'on':'off'}" onclick="toggleRoom(${r.id})">
+          <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="room-name">${r.name}</div>
+      <div class="room-status">${r.isOn?'Active':'Standby'} · ${r.temp}°C</div>
+      <div class="bright-lbl"><span>Brightness</span><span>80%</span></div>
+      <div class="bright-bar"><div class="bright-fill" style="background:${r.isOn?r.color:'#333'}"></div></div>
+      <div class="color-row">
+        <svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+        <div class="swatches">
+          ${SWATCHES.map(c=>`<div class="swatch${r.color===c?' sel':''}" style="background:${c}" onclick="setRoomColor(${r.id},'${c}')"></div>`).join('')}
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+function toggleRoom(id) { rooms=rooms.map(r=>r.id===id?{...r,isOn:!r.isOn}:r); renderRooms(); }
+function setRoomColor(id,color) { rooms=rooms.map(r=>r.id===id?{...r,color}:r); renderRooms(); }
+renderRooms();
+</script>
+</body>
+</html>

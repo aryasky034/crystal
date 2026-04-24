@@ -1,0 +1,88 @@
+# ============================================================
+#  CRYSTAL AI - Main Configuration  v2.0
+# ============================================================
+
+crystal:
+  name:      "Crystal"
+  version:   "2.0"
+  developer: "Renzo"
+
+# ------------------------------------------------------------
+#  AI Brain — Mistral 7B
+#  RAM needed: ~5GB VRAM (GPU) or ~8GB RAM (CPU mode)
+# ------------------------------------------------------------
+brain:
+  model:                "mistral:7b"
+  host:                 "http://localhost:11434"
+  max_context_messages: 20        # raw messages sent to model per call
+  temperature:          0.7       # 0 = focused/factual, 1 = creative
+  stream:               false     # false = full response then speak
+
+# ------------------------------------------------------------
+#  Memory
+# ------------------------------------------------------------
+memory:
+  chat_history_path: "data/memory/chat_history.json"
+  long_term_path:    "data/memory/long_term.json"
+  summaries_path:    "data/memory/summaries.json"   # NEW — cross-session memory
+  max_history_size:  500          # total messages kept on disk
+  summary_threshold: 60           # compress session after this many messages
+
+# ------------------------------------------------------------
+#  Voice — Text to Speech (Piper)
+# ------------------------------------------------------------
+tts:
+  engine:     "piper"
+  piper_model:  "piper_voices/en_US-hfc_female-medium.onnx"
+  piper_config: "piper_voices/en_US-hfc_female-medium.onnx.json"
+  piper_exe:  "piper_voices/piper.exe"
+  sample_rate: 22050
+  volume:       1.0
+
+# ------------------------------------------------------------
+#  Voice — Speech to Text (faster-whisper)
+# ------------------------------------------------------------
+stt:
+  engine:     "faster-whisper"
+  model_size: "base"
+  language:   "en"
+  wake_word:  "hey crystal"
+
+# ------------------------------------------------------------
+#  GUI (Flask web UI)
+# ------------------------------------------------------------
+gui:
+  window_title: "CRYSTAL AI"
+  width:         900
+  height:        650
+
+# ------------------------------------------------------------
+#  Vision (Phase 4 — not active yet)
+# ------------------------------------------------------------
+vision:
+  camera_index:     0
+  detection_model:  "yolov8n.pt"
+  face_data_path:   "data/faces/"
+  enabled:          false
+
+# ------------------------------------------------------------
+#  Avatar (Phase 5 — not active yet)
+# ------------------------------------------------------------
+avatar:
+  enabled: false
+  model_path: "assets/avatar/model.vrm"
+
+# ------------------------------------------------------------
+#  PC Control (Phase 3 — not active yet)
+# ------------------------------------------------------------
+control:
+  enabled: false
+  browser: "chrome"
+
+# ------------------------------------------------------------
+#  Logging
+# ------------------------------------------------------------
+logging:
+  level:        "INFO"
+  log_to_file:  false
+  log_path:     "data/crystal.log"
